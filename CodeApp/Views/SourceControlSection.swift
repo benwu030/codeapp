@@ -19,12 +19,13 @@ struct SourceControlSection: View {
     let onUnstage: (String) throws -> Void
     let onRevert: (String, Bool) async throws -> Void
     let onStage: ([String]) throws -> Void
+    let onPull:  (Remote) async throws -> Void
     let onShowChangesInDiffEditor: (String) throws -> Void
 
     var body: some View {
         Group {
             MainSection(
-                onCommit: onCommit, onPush: onPush, onFetch: onFetch,
+                onCommit: onCommit, onPush: onPush, onFetch: onFetch, onPull: onPull,
                 onStageAllChanges: onStageAllChanges)
             if !App.indexedResources.isEmpty {
                 StagedChangesSection(
@@ -55,6 +56,8 @@ private struct MainSection: View {
     let onCommit: () async throws -> Void
     let onPush: (Remote) async throws -> Void
     let onFetch: () async throws -> Void
+    let onPull:  (Remote) async throws -> Void
+
     let onStageAllChanges: () throws -> Void
 
     func onPushButtonTapped(remote: Remote) {
@@ -135,7 +138,17 @@ private struct MainSection: View {
                         } label: {
                             Label("Push", systemImage: "square.and.arrow.up")
                         }
-
+                        Menu {
+                            ForEach(remotes, id: \.hashValue) { remote in
+                                Button("\(remote.name) - \(remote.URL)") {
+                                    Task{
+                                        try await onPull(remote)
+                                    }
+                                }
+                            }
+                        } label: {
+                            Label("Pull", systemImage: "square.and.arrow.up")
+                        }
                         Button(action: {
                             Task {
                                 try await onFetch()

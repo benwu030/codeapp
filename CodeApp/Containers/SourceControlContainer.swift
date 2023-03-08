@@ -127,7 +127,35 @@ struct SourceControlContainer: View {
             }
         }
     }
-
+    func onPull(remote: Remote) async throws {
+        
+        try await onFetch()
+        guard let serviceProvider = App.workSpaceStorage.gitServiceProvider else {
+            throw SourceControlError.gitServiceProviderUnavailable
+        }
+        
+        App.notificationManager.showInformationMessage(
+            "source_control.pulling_from_origin"+"+"+App.branch)
+        
+        return try await withCheckedThrowingContinuation { continuation in
+            print(remote.name,App.branch)
+            serviceProvider.checkout(remoteBranchName: remote.name + "/"+App.branch, detached: false, error: {
+                App.notificationManager.showErrorMessage(
+                    $0.localizedDescription)
+                continuation.resume(throwing: $0)
+            }) {
+                App.notificationManager.showInformationMessage(
+                    "source_control.pull_succeeded")
+                App.git_status()
+                
+                continuation.resume()
+            }
+            
+            
+            
+            
+        }
+    }
     func onStage(paths: [String]) throws {
         guard let serviceProvider = App.workSpaceStorage.gitServiceProvider else {
             throw SourceControlError.gitServiceProviderUnavailable
@@ -324,6 +352,7 @@ struct SourceControlContainer: View {
                             onUnstage: onUnstage,
                             onRevert: onRevert,
                             onStage: onStage,
+                            onPull: onPull,
                             onShowChangesInDiffEditor: onShowChangesInDiffEditor
                         )
                     } else {
